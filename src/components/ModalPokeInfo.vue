@@ -1,12 +1,8 @@
 <script setup lang="ts">
-import type { Pokemon } from "@/types/pokemon";
+import type { Pokemon, pokemonsType } from "@/types/pokemon";
 import { ref, watchEffect, type PropType } from "vue";
 import CloseIcon from "../assets/close-icon.svg";
 import Pikachu from "../assets/pikachu.png";
-
-type evolutionsType = {
-  evolution_name: string;
-};
 
 const props = defineProps({
   modalIsOpen: {
@@ -14,21 +10,24 @@ const props = defineProps({
     required: true,
     type: Boolean
   },
-  openModal: {
+  openModalDetail: {
     required: true,
     type: Function
   },
-  closeModal: {
+  closeModalDetail: {
     required: true,
     type: Function
   },
   infoPoke: {
     required: true,
     type: Object as PropType<Pokemon | undefined>
+  },
+  evolutions: {
+    required: true,
+    type: Array as PropType<Array<pokemonsType> | undefined>
   }
 });
 
-const evolutions = ref<evolutionsType[] | []>([]);
 const typesPokemon = ref<string>();
 const getTypesPoke = () => {
   typesPokemon.value = props.infoPoke?.types
@@ -41,55 +40,19 @@ const getTotalValuesStats = () => {
   return valuesStats?.reduce((prev, current) => prev + current, 0);
 };
 
-const getEvolution = (data: any) => {
-  let evoChain = [];
-  let evoData = data.chain;
-
-  do {
-    let numberOfEvolutions = evoData["evolves_to"].length;
-
-    evoChain.push({
-      evolution_name: !evoData ? null : evoData.species.name
-    });
-
-    if (numberOfEvolutions > 1) {
-      for (let i = 1; i < numberOfEvolutions; i++) {
-        evoChain.push({
-          evolution_name: !evoData.evolves_to[i]
-            ? null
-            : evoData.evolves_to[i].species.name
-        });
-      }
-    }
-
-    evoData = evoData["evolves_to"][0];
-  } while (!!evoData && evoData.hasOwnProperty!("evolves_to"));
-  evolutions.value = evoChain;
-};
-
 window.addEventListener(
   "keydown",
-  e => e.key === "Escape" && props.closeModal()
+  e => e.key === "Escape" && props.closeModalDetail()
 );
-
-const getEvolutionPoke = async (url: string) => {
-  await fetch(url)
-    .then(response => response.json())
-    .then(data => getEvolution(data));
-};
 
 watchEffect(() => {
   getTypesPoke();
-  props.infoPoke?.id &&
-    fetch(`https://pokeapi.co/api/v2/pokemon-species/${props.infoPoke.id}/`)
-      .then(response => response.json())
-      .then(data => getEvolutionPoke(data.evolution_chain.url));
 });
 </script>
 
 <template>
-  <div v-if="modalIsOpen" class="container-modal" @click="closeModal()">
-    <button class="icon-close-modal" @click="closeModal()">
+  <div v-if="modalIsOpen" class="container-modal" @click="closeModalDetail()">
+    <button class="icon-close-modal" @click="closeModalDetail()">
       <img :src="CloseIcon" />
     </button>
     <div class="container-content" @click="e => e.stopPropagation()">
@@ -107,9 +70,9 @@ watchEffect(() => {
           <p><strong>Name: </strong>{{ infoPoke?.name }}</p>
           <p><strong>Weight: </strong>{{ infoPoke?.weight }}'</p>
           <p><strong>Type(s): </strong>{{ typesPokemon }}</p>
-          <p v-if="evolutions.length > 1">
+          <p v-if="evolutions!.length > 1">
             <strong>Evolutions(s): </strong
-            >{{ evolutions.map(e => e.evolution_name).join(", ") }}
+            >{{ evolutions?.map(e => e).join(", ") }}
           </p>
           <p v-else><strong>Evolutions(s): </strong>no contain evolution</p>
         </div>

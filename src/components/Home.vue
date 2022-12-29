@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type { Pokemon } from "@/types/pokemon";
+import type { pokemonsType } from "@/types/pokemon";
 import { ref } from "vue";
-import Header from "./Header.vue";
-import ModalPokeInfo from "./ModalPokeInfo.vue";
 import Loading from "../assets/loading.svg";
+import Header from "./Header.vue";
+import ModalResultSearchPokes from "./ModalResultSearchPokes.vue";
 
-const pokemon = ref<Pokemon | undefined>();
+const pokemons = ref<pokemonsType[] | undefined>();
 const valueInput = ref<String>("");
 const modalOpen = ref<boolean>(false);
 const isLoading = ref<boolean>(false);
@@ -18,6 +18,47 @@ const closeModal = () => {
   modalOpen.value = false;
 };
 
+const getEvolutionFromPoke = async (url: string) => {
+  await fetch(url)
+    .then(response => response.json())
+    .then(async data => {
+      await fetch(data.evolution_chain.url)
+        .then(response => response.json())
+        .then(data => getEvolutions(data));
+    });
+};
+
+const getEvolutions = async (data: any) => {
+  let evoChain = [];
+  let evoData = data.chain;
+
+  do {
+    let numberOfEvolutions = evoData["evolves_to"].length;
+
+    evoChain.push({
+      evolution_name: !evoData ? null : evoData.species.name,
+      url_poke: !evoData ? null : evoData.species.url
+    });
+
+    if (numberOfEvolutions > 1) {
+      for (let i = 1; i < numberOfEvolutions; i++) {
+        evoChain.push({
+          evolution_name: !evoData.evolves_to[i]
+            ? null
+            : evoData.evolves_to[i].species.name,
+          url_poke: !evoData.evolves_to[i]
+            ? null
+            : evoData.evolves_to[i].species.url
+        });
+      }
+    }
+
+    evoData = evoData["evolves_to"][0];
+  } while (!!evoData && evoData.hasOwnProperty!("evolves_to"));
+  pokemons.value = evoChain;
+  openModal();
+};
+
 const getPokeFromName = async (event: Event) => {
   event.preventDefault();
   isLoading.value = true;
@@ -27,8 +68,7 @@ const getPokeFromName = async (event: Event) => {
   )
     .then(response => response.json())
     .then(data => {
-      pokemon.value = data;
-      openModal();
+      getEvolutionFromPoke(data.species.url);
     })
     .catch(() => alert("Preencha o campo corretamente"));
   isLoading.value = false;
@@ -54,11 +94,11 @@ const getPokeFromName = async (event: Event) => {
       </div>
     </form>
   </div>
-  <ModalPokeInfo
+  <ModalResultSearchPokes
     :modal-is-open="modalOpen"
     :open-modal="openModal"
     :close-modal="closeModal"
-    :info-poke="pokemon"
+    :pokemons-evolutions="pokemons"
   />
 </template>
 

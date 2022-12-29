@@ -172,3 +172,8 @@ interface Type {
   slot: number;
   type: Species;
 }
+
+export type pokemonsType = {
+  evolution_name: string;
+  url_poke: string;
+};
