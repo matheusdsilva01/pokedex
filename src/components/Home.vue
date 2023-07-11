@@ -1,31 +1,50 @@
+<template>
+  <Header />
+  <div class="container">
+    <form class="form" v-on:submit="getPokeFromName($event)">
+      <div class="input-receptor">
+        <label for="input-search" class="label-input-search">
+          Search Pokemon for name:
+        </label>
+        <input
+          id="input-search"
+          required
+          type="text"
+          v-model="valueInput"
+          class="input-search"
+        />
+        <img v-if="isLoading" id="icon-loading" :src="Loading" />
+      </div>
+    </form>
+  </div>
+  <ModalPokeInfo
+    :modal-is-open="modalState"
+    :open-modal-detail="openModal"
+    :close-modal-detail="closeModal"
+    :info-poke="pokemon"
+    :evolutions="pokemons"
+  />
+</template>
+
 <script setup lang="ts">
 import type { pokemonsType } from "@/types/pokemon";
 import { ref } from "vue";
 import Loading from "../assets/loading.svg";
 import Header from "./Header.vue";
-import ModalResultSearchPokes from "./ModalResultSearchPokes.vue";
+import ModalPokeInfo from "./ModalPokeInfo.vue";
 
 const pokemons = ref<pokemonsType[] | undefined>();
 const valueInput = ref<String>("");
-const modalOpen = ref<boolean>(false);
+const modalState = ref<boolean>(false);
 const isLoading = ref<boolean>(false);
+const pokemon = ref();
 
 const openModal = () => {
-  modalOpen.value = true;
+  modalState.value = true;
 };
 
 const closeModal = () => {
-  modalOpen.value = false;
-};
-
-const getEvolutionFromPoke = async (url: string) => {
-  await fetch(url)
-    .then(response => response.json())
-    .then(async data => {
-      await fetch(data.evolution_chain.url)
-        .then(response => response.json())
-        .then(data => getEvolutions(data));
-    });
+  modalState.value = false;
 };
 
 const getEvolutions = async (data: any) => {
@@ -59,48 +78,32 @@ const getEvolutions = async (data: any) => {
   openModal();
 };
 
+const getEvolutionFromPoke = async (url: string) => {
+  const response = await (await fetch(url)).json();
+
+  const evolutions = await (await fetch(response.evolution_chain.url)).json();
+
+  getEvolutions(evolutions);
+};
+
 const getPokeFromName = async (event: Event) => {
   event.preventDefault();
   isLoading.value = true;
-
-  await fetch(
-    `https://pokeapi.co/api/v2/pokemon/${valueInput.value.toLocaleLowerCase()}`
-  )
-    .then(response => response.json())
-    .then(data => {
-      getEvolutionFromPoke(data.species.url);
-    })
-    .catch(() => alert("Preencha o campo corretamente"));
-  isLoading.value = false;
+  try {
+    const response = await (
+      await fetch(
+        `https://pokeapi.co/api/v2/pokemon/${valueInput.value.toLocaleLowerCase()}`
+      )
+    ).json();
+    pokemon.value = response;
+    getEvolutionFromPoke(response.species.url);
+  } catch (err) {
+    () => alert("Preencha o campo corretamente!");
+  } finally {
+    isLoading.value = false;
+  }
 };
 </script>
-
-<template>
-  <Header />
-  <div class="container">
-    <form class="form" v-on:submit="getPokeFromName($event)">
-      <div class="input-receptor">
-        <label for="input-search" class="label-input-search">
-          Search Pokemon for name:
-        </label>
-        <input
-          id="input-search"
-          required
-          type="text"
-          v-model="valueInput"
-          class="input-search"
-        />
-        <img v-if="isLoading" id="icon-loading" :src="Loading" />
-      </div>
-    </form>
-  </div>
-  <ModalResultSearchPokes
-    :modal-is-open="modalOpen"
-    :open-modal="openModal"
-    :close-modal="closeModal"
-    :pokemons-evolutions="pokemons"
-  />
-</template>
 
 <style lang="scss">
 .container {

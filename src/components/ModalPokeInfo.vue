@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { Pokemon, pokemonsType } from "@/types/pokemon";
-import { ref, watchEffect, type PropType } from "vue";
+import { Pokemon, pokemonsType } from "@/types/pokemon";
+import { PropType, computed } from "vue";
 import CloseIcon from "../assets/close-icon.svg";
 import Pikachu from "../assets/pikachu.png";
 
@@ -28,12 +28,9 @@ const props = defineProps({
   }
 });
 
-const typesPokemon = ref<string>();
-const getTypesPoke = () => {
-  typesPokemon.value = props.infoPoke?.types
-    .map(type => type.type.name)
-    .join(", ");
-};
+const typesPokemon = computed<string>(() =>
+  props.infoPoke?.types.map(type => type.type.name).join(", ")
+);
 
 const getTotalValuesStats = () => {
   const valuesStats = props.infoPoke?.stats.map(stat => stat.base_stat);
@@ -44,10 +41,6 @@ window.addEventListener(
   "keydown",
   e => e.key === "Escape" && props.closeModalDetail()
 );
-
-watchEffect(() => {
-  getTypesPoke();
-});
 </script>
 
 <template>
@@ -72,7 +65,7 @@ watchEffect(() => {
           <p><strong>Type(s): </strong>{{ typesPokemon }}</p>
           <p v-if="evolutions!.length > 1">
             <strong>Evolutions(s): </strong
-            >{{ evolutions?.map(e => e).join(", ") }}
+            >{{ evolutions?.map(e => e.evolution_name).join(", ") }}
           </p>
           <p v-else><strong>Evolutions(s): </strong>no contain evolution</p>
         </div>
